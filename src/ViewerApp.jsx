@@ -210,11 +210,11 @@ export default function ViewerApp() {
               }}>メモ</div>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(7, 1fr)',
-                gridTemplateRows: 'repeat(2, auto)',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gridTemplateRows: 'repeat(7, auto)',
               }}>
-                {Array.from({ length: 2 }, (_, ri) =>
-                  Array.from({ length: 7 }, (_, ci) => {
+                {Array.from({ length: 7 }, (_, ri) =>
+                  Array.from({ length: 2 }, (_, ci) => {
                     const key = `m${ri}_c${ci}`
                     return (
                       <div

@@ -313,7 +313,7 @@ export default function App() {
       const gridH = (scheduleData.rowHeights || []).reduce((a, b) => a + b, 0)
       const notesH = 300 // 下部予定欄の概算高さ
       const totalH = gridH + notesH
-      const memoW = 700 // メモ欄: 7列 × 100px
+      const memoW = 200 // メモ欄: 2列 × 100px
       const totalW = (scheduleData.colWidths || []).reduce((a, b) => a + b, 0) + memoW
       const availH = window.innerHeight - UI_H
       const availW = window.innerWidth

@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react'
 
-const MEMO_ROWS = 2
-const MEMO_COLS = 7
+const MEMO_ROWS = 7
+const MEMO_COLS = 2
 const CELL_W = 100
 const CELL_H = 96
 
