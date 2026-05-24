@@ -197,8 +197,8 @@ export default function ViewerApp() {
             )}
           </div>
 
-          {/* メモ欄（工程表ごとのメモ、最下部に表示） */}
-          {scheduleData?.memoCells && Object.values(scheduleData.memoCells).some(c => c?.html) && (
+          {/* メモ欄（工程表ごとのメモ、最下部に常に表示） */}
+          {scheduleData && (
             <div style={{ marginTop: '8px', background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
               <div style={{
                 padding: '3px 8px',
@@ -219,7 +219,7 @@ export default function ViewerApp() {
                     return (
                       <div
                         key={key}
-                        dangerouslySetInnerHTML={{ __html: scheduleData.memoCells[key]?.html || '' }}
+                        dangerouslySetInnerHTML={{ __html: scheduleData?.memoCells?.[key]?.html || '' }}
                         style={{
                           border: '1px solid #ddd',
                           padding: '4px 6px',
