@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { collection, doc, onSnapshot } from 'firebase/firestore'
 import { db } from './firebase'
+import { useRegisterSW } from 'virtual:pwa-register/react'
 
 const DEFAULT_NOTES = {
   company1Name: '会社名・現場名',
@@ -13,6 +14,9 @@ const DEFAULT_NOTES = {
 
 // スマホ閲覧用（読み取り専用）
 export default function ViewerApp() {
+  // PWA更新通知
+  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW()
+
   const [schedules, setSchedules] = useState([])
   const [currentId, setCurrentId] = useState('')
   const [scheduleData, setScheduleData] = useState(null)
@@ -113,6 +117,28 @@ export default function ViewerApp() {
           </span>
         )}
       </div>
+
+      {/* 新バージョン更新バナー */}
+      {needRefresh && (
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 9999,
+          background: '#1565c0', color: 'white',
+          padding: '12px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          boxShadow: '0 -2px 8px rgba(0,0,0,0.3)',
+        }}>
+          <span style={{ fontSize: '14px' }}>🔄 新しいバージョンがあります</span>
+          <button
+            onClick={() => updateServiceWorker(true)}
+            style={{
+              background: 'white', color: '#1565c0',
+              border: 'none', borderRadius: '6px',
+              padding: '6px 14px', fontSize: '14px',
+              fontWeight: 'bold', cursor: 'pointer',
+            }}
+          >更新する</button>
+        </div>
+      )}
 
       {/* グリッド */}
       {scheduleData ? (
