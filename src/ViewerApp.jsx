@@ -196,6 +196,47 @@ export default function ViewerApp() {
                 style={{ padding: '6px 8px', fontSize: '12px', borderTop: '1px solid #eee', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }} />
             )}
           </div>
+
+          {/* メモ欄（工程表ごとのメモ、最下部に表示） */}
+          {scheduleData?.memoCells && Object.values(scheduleData.memoCells).some(c => c?.html) && (
+            <div style={{ marginTop: '8px', background: 'white', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}>
+              <div style={{
+                padding: '3px 8px',
+                background: '#f5f5f5',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                color: '#666',
+                borderBottom: '1px solid #ddd',
+              }}>メモ</div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(7, 1fr)',
+                gridTemplateRows: 'repeat(2, auto)',
+              }}>
+                {Array.from({ length: 2 }, (_, ri) =>
+                  Array.from({ length: 7 }, (_, ci) => {
+                    const key = `m${ri}_c${ci}`
+                    return (
+                      <div
+                        key={key}
+                        dangerouslySetInnerHTML={{ __html: scheduleData.memoCells[key]?.html || '' }}
+                        style={{
+                          border: '1px solid #ddd',
+                          padding: '4px 6px',
+                          fontSize: '13px',
+                          lineHeight: '1.6',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-all',
+                          minHeight: '48px',
+                          overflow: 'hidden',
+                        }}
+                      />
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          )}
         </div>{/* scaleコンテナ終わり */}
         </div>
       ) : (

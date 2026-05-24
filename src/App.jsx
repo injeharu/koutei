@@ -6,6 +6,7 @@ import {
 import { db } from './firebase'
 import Toolbar from './components/Toolbar'
 import ScheduleGrid from './components/ScheduleGrid'
+import MemoSection from './components/MemoSection'
 import ScheduleSelector from './components/ScheduleSelector'
 import NotesSection from './components/NotesSection'
 import PrintPreviewModal from './components/PrintPreviewModal'
@@ -34,6 +35,7 @@ export default function App() {
   const [globalNotes, setGlobalNotes] = useState(DEFAULT_NOTES) // 全工程表共通の下部予定
   const [selectedCell, setSelectedCell] = useState(null)
   const [selectedCells, setSelectedCells] = useState(new Set())
+  const [selectedMemoCell, setSelectedMemoCell] = useState(null)
   const [savedSelection, setSavedSelection] = useState(null)
   const [saveStatus, setSaveStatus] = useState('saved')
   const [showPrintPreview, setShowPrintPreview] = useState(false)
@@ -46,10 +48,21 @@ export default function App() {
   const unsubscribeRef = useRef(null)
   const focusOnLoad = useRef(false) // 工程表作成直後のフォーカス復帰フラグ
   const activeNotesField = useRef(null) // ノート欄でフォーカス中のフィールド情報 { element, field }
+  const activeMemoField = useRef(null)  // メモ欄でフォーカス中の情報
 
-  // グリッドセル選択時にノート欄のフォーカス追跡をクリア
+  // グリッドセル選択時にノート欄・メモ欄のフォーカス追跡をクリア
   function handleSelectCell(key) {
     setSelectedCell(key)
+    setSelectedMemoCell(null)
+    activeNotesField.current = null
+    activeMemoField.current = null
+  }
+
+  // メモセル選択時にグリッドセル・ノート欄の選択をクリア
+  function handleSelectMemoCell(key) {
+    setSelectedMemoCell(key)
+    setSelectedCell(null)
+    setSelectedCells(new Set())
     activeNotesField.current = null
   }
 
@@ -100,6 +113,7 @@ export default function App() {
           colWidths: data.colWidths ?? DEFAULT_COL_WIDTHS,
           rowHeights,
           cells: data.cells ?? {},
+          memoCells: data.memoCells ?? {},
           name: data.name,
           startDate: data.startDate ?? null,
           endDate: data.endDate ?? null,
@@ -122,6 +136,7 @@ export default function App() {
       colWidths: DEFAULT_COL_WIDTHS,
       rowHeights: Array(DEFAULT_ROWS).fill(DEFAULT_ROW_HEIGHT),
       cells: initialCells,
+      memoCells: {},
       updatedAt: serverTimestamp(),
     })
     focusOnLoad.current = true
@@ -181,6 +196,19 @@ export default function App() {
       if (!prev) return prev
       // htmlのみ更新（textAlign/verticalAlignは維持）
       const updated = { ...prev, cells: { ...prev.cells, [cellKey]: { ...prev.cells[cellKey], html } } }
+      scheduleSave(updated)
+      return updated
+    })
+  }, [currentId])
+
+  // メモセル変更
+  const handleMemoCellChange = useCallback((cellKey, html) => {
+    setScheduleData(prev => {
+      if (!prev) return prev
+      const updated = {
+        ...prev,
+        memoCells: { ...(prev.memoCells || {}), [cellKey]: { html } },
+      }
       scheduleSave(updated)
       return updated
     })
@@ -285,7 +313,8 @@ export default function App() {
       const gridH = (scheduleData.rowHeights || []).reduce((a, b) => a + b, 0)
       const notesH = 300 // 下部予定欄の概算高さ
       const totalH = gridH + notesH
-      const totalW = (scheduleData.colWidths || []).reduce((a, b) => a + b, 0)
+      const memoW = 700 // メモ欄: 7列 × 100px
+      const totalW = (scheduleData.colWidths || []).reduce((a, b) => a + b, 0) + memoW
       const availH = window.innerHeight - UI_H
       const availW = window.innerWidth
       const newZoom = Math.min(availH / totalH, availW / totalW, 1)
@@ -355,6 +384,7 @@ export default function App() {
         colWidths: data.colWidths ?? DEFAULT_COL_WIDTHS,
         rowHeights,
         cells: data.cells ?? {},
+        memoCells: data.memoCells ?? {},
         name: data.name,
         startDate: data.startDate ?? null,
         endDate: data.endDate ?? null,
@@ -557,6 +587,11 @@ export default function App() {
                   const el = document.querySelector('[data-cell-key="' + selectedCell + '"]')
                     || document.activeElement
                   if (el) handleCellChange(selectedCell, el.innerHTML)
+                } else if (selectedMemoCell) {
+                  // メモセルへの書式適用後にFirestoreへ保存
+                  const el = document.querySelector('[data-memo-key="' + selectedMemoCell + '"]')
+                    || document.activeElement
+                  if (el) handleMemoCellChange(selectedMemoCell, el.innerHTML)
                 } else if (activeNotesField.current) {
                   // ノート欄への書式適用後にFirestoreへ保存
                   const { element, field } = activeNotesField.current
@@ -600,26 +635,44 @@ export default function App() {
           <div ref={printAreaRef} style={{ zoom: printAreaZoom, display: 'flex', flexDirection: 'column', flex: 1 }}>
             {/* 外枠ボーダー（印刷時も表示） */}
             <div className="print-outer-border" style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-              <ScheduleGrid
-                rows={scheduleData.rows}
-                cols={scheduleData.cols}
-                colWidths={scheduleData.colWidths}
-                rowHeights={scheduleData.rowHeights}
-                cells={scheduleData.cells}
-                selectedCell={selectedCell}
-                onSelectCell={handleSelectCell}
-                selectedCells={selectedCells}
-                onSelectCells={setSelectedCells}
-                onCellChange={handleCellChange}
-                onSaveSelection={setSavedSelection}
-                onRowHeightChange={handleRowHeightChange}
-              />
+              {/* グリッドとメモ欄を横並びに配置 */}
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start' }}>
+                <ScheduleGrid
+                  rows={scheduleData.rows}
+                  cols={scheduleData.cols}
+                  colWidths={scheduleData.colWidths}
+                  rowHeights={scheduleData.rowHeights}
+                  cells={scheduleData.cells}
+                  selectedCell={selectedCell}
+                  onSelectCell={handleSelectCell}
+                  selectedCells={selectedCells}
+                  onSelectCells={setSelectedCells}
+                  onCellChange={handleCellChange}
+                  onSaveSelection={setSavedSelection}
+                  onRowHeightChange={handleRowHeightChange}
+                />
+                {/* メモ欄（グリッド右側、印刷対象外） */}
+                <div className="no-print">
+                  <MemoSection
+                    memoCells={scheduleData.memoCells || {}}
+                    selectedCell={selectedMemoCell}
+                    onSelectCell={handleSelectMemoCell}
+                    onCellChange={handleMemoCellChange}
+                    onSaveSelection={setSavedSelection}
+                    onFocusEnter={() => {
+                      setSelectedCell(null)
+                      setSelectedCells(new Set())
+                      activeNotesField.current = null
+                    }}
+                  />
+                </div>
+              </div>
               <NotesSection
                 notes={globalNotes}
                 onChange={handleNotesChange}
                 onSaveSelection={setSavedSelection}
                 onActiveField={info => { activeNotesField.current = info }}
-                onFocusEnter={() => { setSelectedCell(null); setSelectedCells(new Set()) }}
+                onFocusEnter={() => { setSelectedCell(null); setSelectedCells(new Set()); setSelectedMemoCell(null) }}
               />
             </div>
           </div>{/* zoom wrapper */}
