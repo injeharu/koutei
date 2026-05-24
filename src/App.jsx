@@ -45,6 +45,13 @@ export default function App() {
   const notesSaveTimer = useRef(null)
   const unsubscribeRef = useRef(null)
   const focusOnLoad = useRef(false) // 工程表作成直後のフォーカス復帰フラグ
+  const activeNotesField = useRef(null) // ノート欄でフォーカス中のフィールド情報 { element, field }
+
+  // グリッドセル選択時にノート欄のフォーカス追跡をクリア
+  function handleSelectCell(key) {
+    setSelectedCell(key)
+    activeNotesField.current = null
+  }
 
   // 工程表一覧を監視
   useEffect(() => {
@@ -550,6 +557,10 @@ export default function App() {
                   const el = document.querySelector('[data-cell-key="' + selectedCell + '"]')
                     || document.activeElement
                   if (el) handleCellChange(selectedCell, el.innerHTML)
+                } else if (activeNotesField.current) {
+                  // ノート欄への書式適用後にFirestoreへ保存
+                  const { element, field } = activeNotesField.current
+                  if (element) handleNotesChange({ ...globalNotes, [field]: element.innerHTML })
                 }
               }}
             />
@@ -596,7 +607,7 @@ export default function App() {
                 rowHeights={scheduleData.rowHeights}
                 cells={scheduleData.cells}
                 selectedCell={selectedCell}
-                onSelectCell={setSelectedCell}
+                onSelectCell={handleSelectCell}
                 selectedCells={selectedCells}
                 onSelectCells={setSelectedCells}
                 onCellChange={handleCellChange}
@@ -606,6 +617,9 @@ export default function App() {
               <NotesSection
                 notes={globalNotes}
                 onChange={handleNotesChange}
+                onSaveSelection={setSavedSelection}
+                onActiveField={info => { activeNotesField.current = info }}
+                onFocusEnter={() => { setSelectedCell(null); setSelectedCells(new Set()) }}
               />
             </div>
           </div>{/* zoom wrapper */}

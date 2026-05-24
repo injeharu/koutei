@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react'
 
 // 今後の予定欄（会社2つ分）
-export default function NotesSection({ notes, onChange }) {
+export default function NotesSection({ notes, onChange, onSaveSelection, onActiveField, onFocusEnter }) {
   const c1NameRef = useRef(null)
   const c2NameRef = useRef(null)
   const c1ContentRef = useRef(null)
@@ -25,9 +25,32 @@ export default function NotesSection({ notes, onChange }) {
     }
   }
 
+  const allRefs = [c1NameRef, c2NameRef, c1ContentRef, c2ContentRef, freeTextRef, remarksRef]
+
   const handleChange = useCallback((field, value) => {
     onChange({ ...notes, [field]: value })
   }, [notes, onChange])
+
+  // グリッドセルと同じ selectionchange + ガード方式で selection を保存
+  // collapsed（カーソルのみ）は保存しない
+  useEffect(() => {
+    function handleSelectionChange() {
+      const active = document.activeElement
+      if (!allRefs.some(r => r.current === active)) return
+      const sel = window.getSelection()
+      if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+        onSaveSelection?.(sel.getRangeAt(0).cloneRange())
+      }
+    }
+    document.addEventListener('selectionchange', handleSelectionChange)
+    return () => document.removeEventListener('selectionchange', handleSelectionChange)
+  }, [onSaveSelection])
+
+  // フォーカス時にアクティブフィールドを親へ通知し、グリッドのセル選択をクリア
+  function trackFocus(ref, field) {
+    onActiveField?.({ element: ref.current, field })
+    onFocusEnter?.()
+  }
 
   return (
     <div style={{
@@ -51,6 +74,8 @@ export default function NotesSection({ notes, onChange }) {
             ref={c1NameRef}
             contentEditable
             suppressContentEditableWarning
+            onFocus={() => trackFocus(c1NameRef, 'company1Name')}
+
             onInput={e => handleChange('company1Name', e.currentTarget.innerHTML)}
             style={headerStyle}
             data-placeholder="会社名・現場名を入力"
@@ -60,6 +85,8 @@ export default function NotesSection({ notes, onChange }) {
             ref={c1ContentRef}
             contentEditable
             suppressContentEditableWarning
+            onFocus={() => trackFocus(c1ContentRef, 'company1Content')}
+
             onInput={e => handleChange('company1Content', e.currentTarget.innerHTML)}
             style={contentStyle}
             data-placeholder="予定を入力（例：1. 人孔蓋取替）"
@@ -72,6 +99,8 @@ export default function NotesSection({ notes, onChange }) {
             ref={c2NameRef}
             contentEditable
             suppressContentEditableWarning
+            onFocus={() => trackFocus(c2NameRef, 'company2Name')}
+
             onInput={e => handleChange('company2Name', e.currentTarget.innerHTML)}
             style={headerStyle}
             data-placeholder="会社名・現場名を入力"
@@ -80,6 +109,8 @@ export default function NotesSection({ notes, onChange }) {
             ref={c2ContentRef}
             contentEditable
             suppressContentEditableWarning
+            onFocus={() => trackFocus(c2ContentRef, 'company2Content')}
+
             onInput={e => handleChange('company2Content', e.currentTarget.innerHTML)}
             style={contentStyle}
             data-placeholder="予定を入力"
@@ -92,6 +123,7 @@ export default function NotesSection({ notes, onChange }) {
         ref={freeTextRef}
         contentEditable
         suppressContentEditableWarning
+        onFocus={() => trackFocus(freeTextRef, 'freeText')}
         onInput={e => handleChange('freeText', e.currentTarget.innerHTML)}
         style={{
           ...contentStyle,
@@ -106,6 +138,7 @@ export default function NotesSection({ notes, onChange }) {
         ref={remarksRef}
         contentEditable
         suppressContentEditableWarning
+        onFocus={() => trackFocus(remarksRef, 'remarks')}
         onInput={e => handleChange('remarks', e.currentTarget.innerHTML)}
         style={{
           ...contentStyle,

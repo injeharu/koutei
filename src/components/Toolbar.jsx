@@ -64,7 +64,7 @@ export default function Toolbar({ savedSelection, onFormat, activeCellData, onHA
     setShowColorPicker(false)
   }
 
-  // 文字サイズ適用（Range API で直接 span を生成。execCommand の不安定さを回避）
+  // 文字サイズ適用
   function applySize(size) {
     if (savedSelection) {
       const sel = window.getSelection()
@@ -76,18 +76,16 @@ export default function Toolbar({ savedSelection, onFormat, activeCellData, onHA
     if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return
 
     const range = sel.getRangeAt(0)
+
+    // 選択範囲を抽出し、内側の既存 font-size を除去してから新しい span でラップ
+    // （外側からラップする方式だと内側 span の font-size が CSS カスケードで優先されるため）
+    const fragment = range.extractContents()
+    stripFontSize(fragment)
+
     const span = document.createElement('span')
     span.style.fontSize = size + 'px'
-
-    try {
-      // 単一要素内の選択ならそのまま囲む
-      range.surroundContents(span)
-    } catch (e) {
-      // 複数要素にまたがる場合は抽出→挿入で対応
-      const fragment = range.extractContents()
-      span.appendChild(fragment)
-      range.insertNode(span)
-    }
+    span.appendChild(fragment)
+    range.insertNode(span)
 
     // 新しい span を再選択（次の操作のために）
     const newRange = document.createRange()
@@ -96,6 +94,15 @@ export default function Toolbar({ savedSelection, onFormat, activeCellData, onHA
     sel.addRange(newRange)
 
     onFormat?.()
+  }
+
+  // 要素ツリー内の全 span/font から font-size 指定を除去
+  function stripFontSize(root) {
+    const elements = root.querySelectorAll ? root.querySelectorAll('[style]') : []
+    for (const el of elements) {
+      el.style.fontSize = ''
+    }
+    if (root.style) root.style.fontSize = ''
   }
 
   const textAlign = activeCellData?.textAlign || 'center'
