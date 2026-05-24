@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-viewer/
+dist-installer/
+.env
+.env.local
+*.log
+.DS_Store
+Thumbs.db
